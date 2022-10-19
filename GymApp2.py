@@ -3,6 +3,7 @@
 import os
 import appuifw
 import e32
+import csv
 import dir_iter
 
 class Filebrowser:
@@ -67,7 +68,12 @@ class Filebrowser:
                     #appuifw.Content_handler().open_standalone(item)
                 else:
                     try:
-                        appuifw.Content_handler().open(item)
+                        f = open(item)
+                        reader = csv.reader(f)
+                        for r in reader:
+                            appuifw.note(r[1].decode('utf-8'), "info")
+
+                        #appuifw.Content_handler().open(item)
                     except:
                         import sys
                         type, value = sys.exc_info() [:2]
