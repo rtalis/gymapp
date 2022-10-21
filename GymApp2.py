@@ -1,92 +1,123 @@
 # -*- coding: utf-8 -*-
 
-import os
 import appuifw
 import e32
+import os
 import csv
-import dir_iter
+from graphics import *
+import itertools
+ 
+MAIN_DIR = "E:\\data\\gymapp"
+MENU_ENTRIES = [u""]
+SELECTED = 1
+CSV_DATA = []
 
-class Filebrowser:
-    def __init__(self):
-        self.script_lock = e32.Ao_lock()
-        self.dir_stack = []
-        self.current_dir = dir_iter.Directory_iter(e32.drive_list())
 
-    def run(self):
-        from key_codes import EKeyLeftArrow
-        entries = self.current_dir.list_repr()
-        if not self.current_dir.at_root:
-            entries.insert(0, (u"..", u""))
-        self.lb = appuifw.Listbox(entries, self.lbox_observe)
-        self.lb.bind(EKeyLeftArrow, lambda: self.lbox_observe(0))
-        old_title = appuifw.app.title
-        self.refresh()
-        self.script_lock.wait()
-        appuifw.app.title = old_title
-        appuifw.app.body = None
-        self.lb = None
-
-    def refresh(self):
-        appuifw.app.title = u"File browser"
-        appuifw.app.menu = []
-        appuifw.app.exit_key_handler = self.exit_key_handler
-        appuifw.app.body = self.lb
-
-    def do_exit(self):
-        self.exit_key_handler()
-
-    def exit_key_handler(self):
-        appuifw.app.exit_key_handler = None
-        self.script_lock.signal()
-
-    def lbox_observe(self, ind = None):
-        if not ind == None:
-            index = ind
+def file_selector():
+    csvdir = u"E:\\"
+    selected_file = u""
+    selected_path = csvdir + selected_file
+    while os.path.isfile(selected_path) == False:
+        if os.path.isdir(selected_path):
+            csvdir = csvdir + selected_file
+        files = map(unicode, os.listdir(csvdir))
+        index = appuifw.selection_list(files)
+        if index == None:
+            break
         else:
-            index = self.lb.current()
-        focused_item = 0
+            selected_file = files[index]
 
-        if self.current_dir.at_root:
-            self.dir_stack.append(index)
-            self.current_dir.add(index)
-        elif index == 0:                              # ".." selected
-            focused_item = self.dir_stack.pop()
-            self.current_dir.pop()
-        elif os.path.isdir(self.current_dir.entry(index-1)):
-            self.dir_stack.append(index)
-            self.current_dir.add(index-1)
-        else:
-            item = self.current_dir.entry(index-1)
-            if os.path.splitext(item)[1] == '.py':
-                i = appuifw.popup_menu([u"execfile()", u"Delete"])
-            else:
-                i = appuifw.popup_menu([u"Open", u"Delete"])
-            if i == 0:
-                if os.path.splitext(item)[1].lower() == u'.py':
-                    execfile(item, globals())
-                    self.refresh()
-                    #appuifw.Content_handler().open_standalone(item)
-                else:
-                    try:
-                        f = open(item)
-                        reader = csv.reader(f)
-                        for r in reader:
-                            appuifw.note(r[1].decode('utf-8'), "info")
+        if csvdir[-1] != "\\":
+            csvdir = csvdir + "\\"
 
-                        #appuifw.Content_handler().open(item)
-                    except:
-                        import sys
-                        type, value = sys.exc_info() [:2]
-                        appuifw.note(unicode(str(type)+'\n'+str(value)), "info")
-                return
-            elif i == 1:
-                os.remove(item)
-                focused_item = index - 1
+        selected_path = csvdir + selected_file
+    return selected_path
 
-        entries = self.current_dir.list_repr()
-        if not self.current_dir.at_root:
-            entries.insert(0, (u"..", u""))
-        self.lb.set_list(entries, focused_item)
+def open_data():
+    reader = ""
+    try:
+        csvdir = u"E:\\data\\gymapp\\workouts.csv"
+        f = open(csvdir, 'rb')
+        lines = itertools.islice(f, 1, None)
+        reader = csv.reader(lines)
+    except:
+        appuifw.note(u"Error opening data, choose a new csv file", "error")
+        selected_path = file_selector()
+        f = open(selected_path, 'rb')
+        lines = itertools.islice(f, 1, None)
+        reader = csv.reader(lines)
+        #header = ['treino','nome','series','repetições','carga','biset','intervalo','anotação']
+        w = open(selected_path, 'wb')
+        writer = csv.writer(w)
+        #writer.writerow(header)
+        writer.writerows(reader)
+        w.close()
+        appuifw.note(u"Saved in E: > data > gymapp", "conf")
+        #shutil.copy(selected_path, csvdir)
+    return reader
 
-if __name__ == '__main__':
-    Filebrowser().run()
+def details(exercices, series, load, repetitions):
+    data = [(u'Exercices','text', exercices),
+            (u'Series','text', series),
+            (u'Load','text', load),
+            (u'Repetitions','text', repetitions)]
+    flags = appuifw.FFormEditModeOnly
+    f = appuifw.Form(data, flags)
+    #f.save_hook = csv_writter
+    f.execute()
+    
+
+def handle_selected():
+    counter = 0
+    index = lb.current()
+    for workout in CSV_DATA:
+        if workout[0] == SELECTED:
+            if index == counter:
+                details(workout[1], workout[2], workout[3], workout[4])
+        counter += counter
+
+
+def refresh_menu():
+    #os.makedirs(MAIN_DIR, mode=0o777, exist_ok=False)
+    #if not os.path.exists(MAIN_DIR + "workouts.csv"):
+    for workout in CSV_DATA:
+        if int(workout[0]) == SELECTED:
+            MENU_ENTRIES.append(workout[1].decode('utf-8'))
+    lb.set_list(MENU_ENTRIES)
+
+def exit_key_handler():
+    app_lock.signal()
+
+def handle_tab(tab_index):
+    global SELECTED
+    SELECTED = tab_index
+    refresh_menu()
+
+def create_tabs():
+    counter = 1
+    tabs = []
+    tabs.append(unicode(str(counter)))
+    check = '1'
+    for workout in CSV_DATA:
+        if not str(workout[0]) == check:
+            counter += counter
+            check = str(workout[0])
+            tabs.append(unicode(str(counter)))
+    print(tabs)
+    return tabs
+
+
+app_lock = e32.Ao_lock()
+data = open_data()
+for d in data:
+    CSV_DATA.append(d)
+tabs = create_tabs()
+appuifw.app.set_tabs(tabs, handle_tab)
+appuifw.app.title = u'Gymapp'
+lb = appuifw.Listbox(MENU_ENTRIES, handle_selected)
+appuifw.app.body = lb
+appuifw.app.exit_key_handler = exit_key_handler
+refresh_menu()
+
+app_lock.wait()
+
