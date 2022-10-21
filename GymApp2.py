@@ -120,3 +120,4 @@ appuifw.app.exit_key_handler = exit_key_handler
 refresh_menu()
 
 app_lock.wait()
+
