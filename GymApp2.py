@@ -56,14 +56,17 @@ def open_data():
         #shutil.copy(selected_path, csvdir)
     return reader
 
+def csv_writter():
+    print('TODO saved')
+    
 def details(exercices, series, load, repetitions):
-    data = [(u'Exercices','text', exercices),
-            (u'Series','text', series),
-            (u'Load','text', load),
-            (u'Repetitions','text', repetitions)]
+    data = [(u'Exercices','text', exercices.decode('utf-8')),
+            (u'Series','text', series.decode('utf-8')),
+            (u'Load','text', load.decode('utf-8')),
+            (u'Repetitions','text', repetitions.decode('utf-8'))]
     flags = appuifw.FFormEditModeOnly
     f = appuifw.Form(data, flags)
-    #f.save_hook = csv_writter
+    f.save_hook = csv_writter
     f.execute()
     
 
@@ -71,21 +74,22 @@ def handle_selected():
     counter = 0
     index = lb.current()
     for workout in CSV_DATA:
-        if workout[0] == SELECTED:
+        if int(workout[0]) == SELECTED:
             if index == counter:
-                details(workout[1], workout[2], workout[3], workout[4])
-        counter += counter
+                try:
+                    details(workout[1], workout[2], workout[3], workout[4])
+                except:
+                    appuifw.note(u"Not able to show the details of the selected entry", "error")
+                break
+            counter = counter + 1
 
 
 def refresh_menu():
     #os.makedirs(MAIN_DIR, mode=0o777, exist_ok=False)
     #if not os.path.exists(MAIN_DIR + "workouts.csv"):
- 
     MENU_ENTRIES = []
     for workout in CSV_DATA:
-        print(int(workout[0]),' : ', SELECTED )
-        if int(workout[0]) == SELECTED:
-            
+        if int(workout[0]) == SELECTED:    
             MENU_ENTRIES.append(workout[1].decode('utf-8'))
     lb.set_list(MENU_ENTRIES, 0)
 
