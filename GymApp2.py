@@ -80,30 +80,31 @@ def handle_selected():
 def refresh_menu():
     #os.makedirs(MAIN_DIR, mode=0o777, exist_ok=False)
     #if not os.path.exists(MAIN_DIR + "workouts.csv"):
+ 
+    MENU_ENTRIES = []
     for workout in CSV_DATA:
+        print(int(workout[0]),' : ', SELECTED )
         if int(workout[0]) == SELECTED:
+            
             MENU_ENTRIES.append(workout[1].decode('utf-8'))
-    lb.set_list(MENU_ENTRIES)
+    lb.set_list(MENU_ENTRIES, 0)
 
 def exit_key_handler():
     app_lock.signal()
 
 def handle_tab(tab_index):
     global SELECTED
-    SELECTED = tab_index
+    SELECTED = tab_index + 1 #exercices start from 1; tabs index start from 0
     refresh_menu()
 
 def create_tabs():
-    counter = 1
     tabs = []
-    tabs.append(unicode(str(counter)))
+    tabs.append(unicode(1))
     check = '1'
     for workout in CSV_DATA:
         if not str(workout[0]) == check:
-            counter += counter
+            tabs.append(unicode(str(workout[0])))
             check = str(workout[0])
-            tabs.append(unicode(str(counter)))
-    print(tabs)
     return tabs
 
 
