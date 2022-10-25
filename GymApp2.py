@@ -4,14 +4,15 @@ import appuifw
 import e32
 import os
 import csv
-from graphics import *
+import time
 import itertools
+import shutil
  
-MAIN_DIR = "E:\\data\\gymapp"
+MAIN_DIR = u"E:\\data\\gymapp"
 MENU_ENTRIES = [u""]
 SELECTED = 1
 CSV_DATA = []
-
+FILE = None
 
 def file_selector():
     csvdir = u"E:\\"
@@ -35,25 +36,20 @@ def file_selector():
 
 def open_data():
     reader = ""
+    global FILE
     try:
         csvdir = u"E:\\data\\gymapp\\workouts.csv"
-        f = open(csvdir, 'rb')
-        lines = itertools.islice(f, 1, None)
+        FILE = open(csvdir, 'rb')
+        lines = itertools.islice(FILE, 1, None)
         reader = csv.reader(lines)
+        
     except:
         appuifw.note(u"Error opening data, choose a new csv file", "error")
         selected_path = file_selector()
-        f = open(selected_path, 'rb')
-        lines = itertools.islice(f, 1, None)
-        reader = csv.reader(lines)
-        #header = ['treino','nome','series','repetições','carga','biset','intervalo','anotação']
-        w = open(selected_path, 'wb')
-        writer = csv.writer(w)
-        #writer.writerow(header)
-        writer.writerows(reader)
-        w.close()
+
+        shutil.copy2(selected_path, csvdir)
         appuifw.note(u"Saved in E: > data > gymapp", "conf")
-        #shutil.copy(selected_path, csvdir)
+        open_data()
     return reader
 
 def csv_writter():
@@ -106,12 +102,25 @@ def create_tabs():
     tabs.append(unicode(1))
     check = '1'
     for workout in CSV_DATA:
-        if not str(workout[0]) == check:
+        if not str(workout[0]).decode('utf-8') == check:
             tabs.append(unicode(str(workout[0])))
             check = str(workout[0])
     return tabs
 
+def data_update():
+    global FILE
+    FILE.close()
+    shutil.move(unicode(os.path.join(MAIN_DIR, 'workouts.csv')), unicode(os.path.join(MAIN_DIR, 'workouts.csv.bk')))
+    appuifw.note(u"Sucessully copied to workouts.csv.bk", "conf")
+    open_data()
+    
+def print_about(): 
+    print('\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n')
+    time.sleep(6)
+    refresh_menu()
 
+
+appuifw.app.screen = "normal"
 app_lock = e32.Ao_lock()
 data = open_data()
 for d in data:
@@ -122,7 +131,10 @@ appuifw.app.title = u'Gymapp'
 lb = appuifw.Listbox(MENU_ENTRIES, handle_selected)
 appuifw.app.body = lb
 appuifw.app.exit_key_handler = exit_key_handler
+appuifw.app.menu = [ (u"About", print_about), (u"Update training", data_update),(u"Exit", exit_key_handler)]
 refresh_menu()
 
 app_lock.wait()
+FILE.close()
+
 
